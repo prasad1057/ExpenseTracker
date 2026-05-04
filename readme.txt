@@ -8,3 +8,4 @@
 8.show total expennses
 9.add delete expennses
 10.add date filters
+11.add category pie chart

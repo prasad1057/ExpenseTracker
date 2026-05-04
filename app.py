@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, url_for, make_response, flash, redirect
 from flask_sqlalchemy import SQLAlchemy
 from datetime import date, datetime
+from sqlalchemy import func
 
 
 app = Flask(__name__)
@@ -78,6 +79,27 @@ def index():
     expenses = q.order_by(Expense.date.desc(), Expense.id.desc()).all()
     total = round(sum(e.amount for e in expenses), 2)
     
+    
+    
+    cat_q = db.session.query(Expense.category, func.sum(Expense.amount))
+    
+    if start_date:
+        cat_q = cat_q.filter(Expense.date >= start_date)
+        
+    if end_date:
+        cat_q = cat_q.filter(Expense.date <= end_date)
+
+    if selected_query:
+        cat_q = cat_q.filter(Expense.date == selected_query)
+        
+        
+    cat_rows = cat_q.group_by(Expense.category).all()
+    # print(cat_rows)
+    cat_labels = [c for c, _ in cat_rows]
+    cat_values = [round(float(s or 0),2) for _, s in cat_rows]
+    # print(cat_values)
+    
+    
     return render_template(
         'index.html',
         
@@ -88,7 +110,7 @@ def index():
         start_str=start_str,
         end_str=end_str,
         selected_query=selected_query,
-        
+        cat_values=cat_values,
         
         
         )
