@@ -80,6 +80,7 @@ def index():
     total = round(sum(e.amount for e in expenses), 2)
     
     
+    ################ pie-chart ################
     
     cat_q = db.session.query(Expense.category, func.sum(Expense.amount))
     
@@ -90,7 +91,7 @@ def index():
         cat_q = cat_q.filter(Expense.date <= end_date)
 
     if selected_query:
-        cat_q = cat_q.filter(Expense.date == selected_query)
+        cat_q = cat_q.filter(Expense.category == selected_query)
         
         
     cat_rows = cat_q.group_by(Expense.category).all()
@@ -100,6 +101,25 @@ def index():
     # print(cat_values)
     
     
+    ################ Day-chart ################
+    
+    day_q = db.session.query(Expense.date, func.sum(Expense.amount))
+    
+    if start_date:
+        day_q = day_q.filter(Expense.date >= start_date)
+        
+    if end_date:
+        day_q = day_q.filter(Expense.date <= end_date)
+
+    if selected_query:
+        day_q = day_q.filter(Expense.date == selected_query)
+        
+        
+    day_rows = day_q.group_by(Expense.category).order_by(Expense.date).all()
+    day_labels = [d.isoformat() for d, _ in day_rows]
+    day_values = [round(float(s or 0),2) for _, s in day_rows]
+
+
     return render_template(
         'index.html',
         
@@ -110,7 +130,10 @@ def index():
         start_str=start_str,
         end_str=end_str,
         selected_query=selected_query,
+        cat_labels=cat_labels,
         cat_values=cat_values,
+        day_labels=day_labels,
+        day_values=day_values,
         
         
         )
