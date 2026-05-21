@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, url_for, make_response, flash
 from flask_sqlalchemy import SQLAlchemy
 from datetime import date, datetime, date as dt_date
 from sqlalchemy import func
+import os
 
 
 app = Flask(__name__)
@@ -9,9 +10,13 @@ app = Flask(__name__)
 
 #step1: DB Creation
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///expenses.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///instance/expenses.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'my-secret-key'
+
+
+
+os.makedirs("instance", exist_ok=True)
 
 db = SQLAlchemy(app)
 
