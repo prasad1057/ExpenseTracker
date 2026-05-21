@@ -1,6 +1,6 @@
-from flask import Flask, render_template, request, url_for, make_response, flash, redirect
+from flask import Flask, render_template, request, url_for, make_response, flash, redirect, Response
 from flask_sqlalchemy import SQLAlchemy
-from datetime import date, datetime
+from datetime import date, datetime, date as dt_date
 from sqlalchemy import func
 
 
@@ -112,10 +112,10 @@ def index():
         day_q = day_q.filter(Expense.date <= end_date)
 
     if selected_query:
-        day_q = day_q.filter(Expense.date == selected_query)
+        day_q = day_q.filter(Expense.category == selected_query)
         
         
-    day_rows = day_q.group_by(Expense.category).order_by(Expense.date).all()
+    day_rows = day_q.group_by(Expense.date).order_by(Expense.date).all()
     day_labels = [d.isoformat() for d, _ in day_rows]
     day_values = [round(float(s or 0),2) for _, s in day_rows]
 
@@ -193,5 +193,93 @@ def delete(expense_id):
     return redirect(url_for("index"))
 
 
+
+@app.route("/edit/<int:expense_id>")
+def edit(expense_id):
+
+    expense = Expense.query.get_or_404(expense_id)
+
+    return render_template(
+        "edit.html",
+        expense=expense,
+        categories=CATEGORIES
+    )
+
+
+@app.route("/edit/<int:expense_id>/post", methods=["POST"])
+def edit_post(expense_id):
+
+    expense = Expense.query.get_or_404(expense_id)
+
+    description = (request.form.get("description") or "").strip()
+    amount_str = (request.form.get("amount") or "").strip()
+    category = (request.form.get("category") or "").strip()
+    date_str = (request.form.get("date") or "").strip()
+
+    expense.description = description
+    expense.amount = float(amount_str)
+    expense.category = category
+    expense.date = datetime.strptime(
+        date_str,
+        "%Y-%m-%d"
+    ).date()
+
+    db.session.commit()
+
+    flash("Expense Updated", "success")
+
+    return redirect(url_for("index"))
+
+
+
+@app.route("/export.csv")
+def export_csv():
+    
+     # 1. read query string
+    
+    start_str = (request.args.get("start") or "").strip()
+    end_str = (request.args.get("end") or "").strip()
+    selected_query = (request.args.get("category") or "").strip()
+    
+    # 2. parsing
+    
+    start_date = parse_date_or_none(start_str)
+    end_date = parse_date_or_none(end_str)
+
+
+    q = Expense.query
+    
+    if start_date:
+        q = q.filter(Expense.date >= start_date)
+        
+    if end_date:
+        q = q.filter(Expense.date <= end_date)
+
+    if selected_query:
+        q = q.filter(Expense.category == selected_query)
+        
+    
+    expenses = q.order_by(Expense.date, Expense.id).all()
+
+    lines = ["date, description, category, amount"]
+
+    for e in expenses:
+        lines.append(f"{e.date.isoformat()}, {e.description}, {e.category}, {e.amount:.2f}")
+    csv_data = "\n".join(lines)
+
+
+    fname_start = start_str or "all"
+    fname_end = end_str or "all"
+    filename = f"expenses_{fname_start}_to_{fname_end}.csv"
+    
+    
+    return Response (
+        csv_data,
+        headers = {
+            "Content-Type": "text/csv",
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    )
+
 if __name__ == "__main__":
-    app.run(debug=True,port=5000)
+    app.run(host="0.0.0.0", port=5000)
