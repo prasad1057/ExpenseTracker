@@ -10,7 +10,12 @@ app = Flask(__name__)
 
 #step1: DB Creation
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///instance/expenses.db'
+import os
+
+basedir = os.path.abspath(os.path.dirname(__file__))
+
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'expenses.db')
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'my-secret-key'
 
